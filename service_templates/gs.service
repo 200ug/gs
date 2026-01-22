@@ -1,0 +1,12 @@
+[Unit]
+Description=gs file sync on login
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/full/absolute/path/to/your/gs auto --timeout 5m
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
+

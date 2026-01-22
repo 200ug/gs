@@ -102,7 +102,7 @@ func getCurrentLocal(cfg *Config) (*Local, error) {
 	}
 	local := cfg.FindLocalForPath(cwd)
 	if local == nil {
-		return nil, fmt.Errorf("current directory is not a configured local (run 'gs init' first)")
+		return nil, fmt.Errorf("current directory is not a configured local (run 'gs track' first)")
 	}
 	return local, nil
 }

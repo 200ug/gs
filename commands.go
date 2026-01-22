@@ -175,6 +175,7 @@ func cmdPull() error {
 
 	fmt.Print(result.Output)
 	fmt.Println("[+] pull complete")
+
 	return nil
 }
 
@@ -242,6 +243,7 @@ func pullLocal(cfg *Config, local *Local) error {
 
 	fmt.Print(result.Output)
 	fmt.Printf("[+] pull complete for '%s'\n", local.Name)
+
 	return nil
 }
 
@@ -275,6 +277,7 @@ func cmdAuto(interval, timeout time.Duration) error {
 	}
 
 	fmt.Println("[+] auto-pull complete for all locals")
+
 	return nil
 }
 

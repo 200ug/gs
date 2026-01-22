@@ -128,6 +128,7 @@ func parseItemizedChanges(output string) []string {
 			changes = append(changes, line)
 		}
 	}
+
 	return changes
 }
 
@@ -137,5 +138,7 @@ func checkRemoteChanges(cfg *Config, local *Local) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return result.Changes, nil
 }
+

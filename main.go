@@ -64,6 +64,7 @@ func runInit() error {
 	if len(os.Args) < 3 {
 		return fmt.Errorf("usage: gs init <user@host:port:/path>")
 	}
+
 	return cmdInit(os.Args[2])
 }
 
@@ -71,6 +72,7 @@ func runPush() error {
 	fs := flag.NewFlagSet("push", flag.ExitOnError)
 	force := fs.Bool("force", false, "overwrite remote even if it has unpulled changes")
 	fs.Parse(os.Args[2:])
+
 	return cmdPush(*force)
 }
 
@@ -79,6 +81,7 @@ func runAuto() error {
 	interval := fs.Duration("interval", 30*time.Second, "poll interval")
 	timeout := fs.Duration("timeout", 15*time.Minute, "max wait time (0 for infinite)")
 	fs.Parse(os.Args[2:])
+
 	return cmdAuto(*interval, *timeout)
 }
 

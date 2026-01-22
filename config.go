@@ -31,6 +31,7 @@ func configDir() string {
 	if err != nil {
 		return ""
 	}
+
 	return filepath.Join(home, ".config", "gs")
 }
 
@@ -64,6 +65,7 @@ func (c *Config) FindLocalForPath(path string) *Local {
 			return &c.Locals[i]
 		}
 	}
+
 	return nil
 }
 
@@ -73,6 +75,7 @@ func (c *Config) FindLocalByName(name string) *Local {
 			return &c.Locals[i]
 		}
 	}
+
 	return nil
 }
 
@@ -86,6 +89,7 @@ func (c *Config) AddLocal(name, path string) error {
 		return fmt.Errorf("path '%s' already configured as local '%s'", path, existing.Name)
 	}
 	c.Locals = append(c.Locals, Local{Name: name, Path: path})
+
 	return nil
 }
 
@@ -124,8 +128,10 @@ func expandPath(path string) string {
 		if err != nil {
 			return path
 		}
+
 		return filepath.Join(home, path[2:])
 	}
+
 	return path
 }
 
@@ -134,6 +140,7 @@ func parseRemote(remote string) (host, port, path string, err error) {
 	if len(parts) != 3 {
 		return "", "", "", fmt.Errorf("invalid remote format, expected 'user@host:port:/path'")
 	}
+
 	return parts[0], parts[1], strings.TrimSuffix(parts[2], "/"), nil
 }
 

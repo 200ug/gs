@@ -7,10 +7,13 @@ usage:
 	gs init <user@host:port:/path>  initialize config with remote server
 	gs track                        add current directory to sync list
 	gs untrack                      remove current directory from sync list
-	gs push                         sync local to server
+	gs push [options]               sync local to server
 	gs pull                         sync server to local
 	gs status                       show pending changes (dry-run)
 	gs auto [options]               wait for server, then pull all
+
+push options:
+	--force                         overwrite remote even if it has unpulled changes
 
 auto options:
 	--interval <duration>           poll interval (default: 30s)
@@ -27,7 +30,7 @@ Example config tracking locals `notes` and `documents` (and syncing them to `/sr
 server = "user@host"
 port = "22"
 remote_path = "/srv/sync"
-excludes = [".git", "*.tmp", ".gs.state"]
+excludes = [".git", "*.tmp"]
 
 [[locals]]
 name = "notes"

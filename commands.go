@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -213,16 +214,21 @@ func cmdStatus() error {
 
 	fmt.Printf("[~] checking status for '%s'...\n", local.Name)
 
-	fmt.Println("[~] checking local changes (would push)...")
+	fmt.Println("[~] checking remote...")
+	pullResult, err := runRsync(remote, local.Path, cfg.Port, cfg.Excludes, true, true)
+	if errors.Is(err, ErrRemoteNotFound) {
+		fmt.Println("[!] remote directory does not exist yet")
+		fmt.Println("[+] run 'gs push' to initialize it")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to check remote: %w", err)
+	}
+
+	fmt.Println("[~] checking local...")
 	pushResult, err := runRsync(local.Path, remote, cfg.Port, cfg.Excludes, true, true)
 	if err != nil {
 		return fmt.Errorf("failed to check local changes: %w", err)
-	}
-
-	fmt.Println("[~] checking remote changes (would pull)...")
-	pullResult, err := runRsync(remote, local.Path, cfg.Port, cfg.Excludes, true, true)
-	if err != nil {
-		return fmt.Errorf("failed to check remote changes: %w", err)
 	}
 
 	fmt.Println()

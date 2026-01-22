@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"strings"
 	"time"
 )
+
+var ErrRemoteNotFound = errors.New("remote directory does not exist")
 
 const sshOptions = "-o PasswordAuthentication=no -o BatchMode=yes"
 
@@ -80,8 +83,13 @@ func runRsync(src, dst, port string, excludes []string, dryRun, del bool) (*Rsyn
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.ExitCode() == 255 {
+			switch exitErr.ExitCode() {
+			case 255: // ssh timeout
 				return nil, fmt.Errorf("ssh connection failed (check pubkey auth): %s", string(output))
+			case 23: // partial transfer error
+				if strings.Contains(string(output), "No such file or directory") {
+					return nil, ErrRemoteNotFound
+				}
 			}
 		}
 		return nil, fmt.Errorf("rsync failed: %w\n%s", err, string(output))

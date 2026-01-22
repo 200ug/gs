@@ -11,10 +11,13 @@ const usage = `usage:
 	gs init <user@host:port:/path>  initialize config with remote server
 	gs track                        add current directory to sync list
 	gs untrack                      remove current directory from sync list
-	gs push                         sync local to server
+	gs push [options]               sync local to server
 	gs pull                         sync server to local
 	gs status                       show pending changes (dry-run)
 	gs auto [options]               wait for server, then pull all
+
+push options:
+	--force                         overwrite remote even if it has unpulled changes
 
 auto options:
 	--interval <duration>           poll interval (default: 30s)
@@ -22,7 +25,7 @@ auto options:
 `
 
 func main() {
-	if len(os.Args) < 2 || len(os.Args) > 3 {
+	if len(os.Args) < 2 {
 		fmt.Print(usage)
 		os.Exit(1)
 	}
@@ -36,7 +39,7 @@ func main() {
 	case "untrack":
 		err = cmdUntrack()
 	case "push":
-		err = cmdPush()
+		err = runPush()
 	case "pull":
 		err = cmdPull()
 	case "status":
@@ -64,6 +67,13 @@ func runInit() error {
 	return cmdInit(os.Args[2])
 }
 
+func runPush() error {
+	fs := flag.NewFlagSet("push", flag.ExitOnError)
+	force := fs.Bool("force", false, "overwrite remote even if it has unpulled changes")
+	fs.Parse(os.Args[2:])
+	return cmdPush(*force)
+}
+
 func runAuto() error {
 	fs := flag.NewFlagSet("auto", flag.ExitOnError)
 	interval := fs.Duration("interval", 30*time.Second, "poll interval")
@@ -71,3 +81,4 @@ func runAuto() error {
 	fs.Parse(os.Args[2:])
 	return cmdAuto(*interval, *timeout)
 }
+

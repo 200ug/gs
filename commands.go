@@ -29,7 +29,7 @@ func cmdInit(remote string) error {
 		Server:     host,
 		Port:       port,
 		RemotePath: remotePath,
-		Excludes:   []string{".git", "*.tmp", stateFileName},
+		Excludes:   []string{".git", "*.tmp"},
 	}
 
 	if err := saveConfig(cfg); err != nil {
@@ -65,6 +65,7 @@ func cmdTrack() error {
 	}
 
 	fmt.Printf("[+] tracking '%s' (%s) -> %s\n", localName, cwd, cfg.RemoteForLocal(cfg.FindLocalByName(localName)))
+
 	return nil
 }
 
@@ -92,6 +93,7 @@ func cmdUntrack() error {
 	}
 
 	fmt.Printf("[+] untracked '%s'\n", name)
+
 	return nil
 }
 
@@ -100,14 +102,16 @@ func getCurrentLocal(cfg *Config) (*Local, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
+
 	local := cfg.FindLocalForPath(cwd)
 	if local == nil {
 		return nil, fmt.Errorf("current directory is not a configured local (run 'gs track' first)")
 	}
+
 	return local, nil
 }
 
-func cmdPush() error {
+func cmdPush(force bool) error {
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
@@ -119,30 +123,24 @@ func cmdPush() error {
 	}
 	remote := cfg.RemoteForLocal(local)
 
-	state, err := loadState(local.Path)
+	fmt.Println("[~] checking for remote changes...")
+	changes, err := checkRemoteChanges(cfg, local)
 	if err != nil {
-		return err
-	}
-
-	if !state.LastPull.IsZero() {
-		fmt.Println("[~] checking for remote changes...")
-		changes, err := checkRemoteChanges(cfg, local)
-		if err != nil {
+		if !errors.Is(err, ErrRemoteNotFound) {
 			return fmt.Errorf("failed to check remote: %w", err)
 		}
-		if len(changes) > 0 {
-			fmt.Println("[!] warning: remote has changes that haven't been pulled:")
-			for _, c := range changes {
-				fmt.Printf("  %s\n", c)
-			}
-			fmt.Println("[+] consider running 'gs pull' first, or use 'gs push' again to force")
-		}
 	}
 
-	if state.LastPush.IsZero() {
-		fmt.Println("[!] warning: first push will use --delete flag, which removes files on remote that don't exist locally")
-		fmt.Println("[?] press ctrl+c to abort, or wait 5 seconds to continue...")
-		time.Sleep(5 * time.Second)
+	if len(changes) > 0 {
+		fmt.Println("[!] remote has changes that would be overwritten:")
+		for _, c := range changes {
+			fmt.Printf("  %s\n", c)
+		}
+		if !force {
+			fmt.Println("[+] run 'gs pull' first, or use 'gs push --force' to overwrite")
+			return fmt.Errorf("push aborted: remote has unpulled changes")
+		}
+		fmt.Println("[!] --force specified, proceeding anyway...")
 	}
 
 	fmt.Printf("[~] pushing '%s' to server...\n", local.Name)
@@ -151,13 +149,9 @@ func cmdPush() error {
 		return err
 	}
 
-	state.LastPush = time.Now().UTC()
-	if err := saveState(local.Path, state); err != nil {
-		return fmt.Errorf("failed to save state: %w", err)
-	}
-
 	fmt.Print(result.Output)
 	fmt.Println("[+] push complete")
+
 	return nil
 }
 
@@ -173,26 +167,10 @@ func cmdPull() error {
 	}
 	remote := cfg.RemoteForLocal(local)
 
-	state, err := loadState(local.Path)
-	if err != nil {
-		return err
-	}
-
-	if state.LastPull.IsZero() {
-		fmt.Println("[!] warning: first pull will use --delete flag, which removes local files that don't exist on remote")
-		fmt.Println("[?] press ctrl+c to abort, or wait 3 seconds to continue...")
-		time.Sleep(3 * time.Second)
-	}
-
 	fmt.Printf("[~] pulling '%s' from server...\n", local.Name)
 	result, err := runRsync(remote, local.Path, cfg.Port, cfg.Excludes, false, true)
 	if err != nil {
 		return err
-	}
-
-	state.LastPull = time.Now().UTC()
-	if err := saveState(local.Path, state); err != nil {
-		return fmt.Errorf("failed to save state: %w", err)
 	}
 
 	fmt.Print(result.Output)
@@ -231,21 +209,20 @@ func cmdStatus() error {
 		return fmt.Errorf("failed to check local changes: %w", err)
 	}
 
-	fmt.Println()
 	if len(pushResult.Changes) == 0 && len(pullResult.Changes) == 0 {
 		fmt.Println("[+] everything is in sync")
 		return nil
 	}
 
 	if len(pushResult.Changes) > 0 {
-		fmt.Println("local changes (push to sync):")
+		fmt.Println("[+] local changes (push to sync):")
 		for _, c := range pushResult.Changes {
 			fmt.Printf("  %s\n", c)
 		}
 	}
 
 	if len(pullResult.Changes) > 0 {
-		fmt.Println("remote changes (pull to sync):")
+		fmt.Println("[+] remote changes (pull to sync):")
 		for _, c := range pullResult.Changes {
 			fmt.Printf("  %s\n", c)
 		}
@@ -257,20 +234,10 @@ func cmdStatus() error {
 func pullLocal(cfg *Config, local *Local) error {
 	remote := cfg.RemoteForLocal(local)
 
-	state, err := loadState(local.Path)
-	if err != nil {
-		return err
-	}
-
 	fmt.Printf("[~] pulling '%s' from server...\n", local.Name)
 	result, err := runRsync(remote, local.Path, cfg.Port, cfg.Excludes, false, true)
 	if err != nil {
 		return err
-	}
-
-	state.LastPull = time.Now().UTC()
-	if err := saveState(local.Path, state); err != nil {
-		return fmt.Errorf("failed to save state: %w", err)
 	}
 
 	fmt.Print(result.Output)
@@ -310,3 +277,4 @@ func cmdAuto(interval, timeout time.Duration) error {
 	fmt.Println("[+] auto-pull complete for all locals")
 	return nil
 }
+
